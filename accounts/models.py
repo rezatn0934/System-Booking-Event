@@ -1,18 +1,13 @@
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
-from django.core.validators import RegexValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from .managers import UserManager
-
-phone_number_validator = RegexValidator(
-    regex=r"^09\d{9}$",
-    message=_("Phone number must be in the format 09XXXXXXXXX."),
-)
+from .validators import phone_number_validator
 
 
 class User(AbstractBaseUser, PermissionsMixin):
-    phone = models.CharField(
+    username = models.CharField(
         _("Phone Number"),
         max_length=11,
         unique=True,
@@ -34,7 +29,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         auto_now=True,
     )
 
-    USERNAME_FIELD = "phone"
+    USERNAME_FIELD = "username"
     REQUIRED_FIELDS = []
 
     objects = UserManager()
@@ -45,7 +40,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name_plural = _("Users")
 
     def __str__(self):
-        return self.phone
+        return self.username
 
     @property
     def full_name(self):
