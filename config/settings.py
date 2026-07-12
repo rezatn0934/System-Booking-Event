@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -45,6 +46,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django",
     "rest_framework",
+    "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     ###############################
     "accounts.apps.AccountsConfig",
 ]
@@ -78,6 +81,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
+AUTH_USER_MODEL = "accounts.User"
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
@@ -125,3 +129,56 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "static/"
+
+# cache config
+REDIS_HOST = os.environ.get("REDIS_HOST")
+REDIS_PORT = os.environ.get("REDIS_PORT")
+
+DEFAULT_CACHE_DATABASE = os.environ.get("DEFAULT_CACHE_DATABASE")
+DEFAULT_CACHE_TTL = os.environ.get("DEFAULT_CACHE_TTL")
+
+CAPTCHA_CACHE_TTL = os.environ.get("CAPTCHA_CACHE_TTL")
+CAPTCHA_CACHE_DATABASE = os.environ.get("CAPTCHA_CACHE_DATABASE")
+
+OTP_CACHE_TTL = os.environ.get("OTP_CACHE_TTL")
+OTP_CACHE_DATABASE = os.environ.get("OTP_CACHE_DATABASE")
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/{DEFAULT_CACHE_DATABASE}",
+        "TIMEOUT": DEFAULT_CACHE_TTL,
+    },
+    "auth": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/{OTP_CACHE_DATABASE}",
+        "TIMEOUT": OTP_CACHE_TTL,
+    },
+}
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "UPDATE_LAST_LOGIN": True,
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
+
+OTP_TTL_SECONDS = 120
+
+OTP_MAX_ATTEMPTS = 5
+
+OTP_REQUEST_LIMIT = 5
+
+OTP_REQUEST_WINDOW_SECONDS = 3600
+
+OTP_BLOCK_SECONDS = 3600
