@@ -134,6 +134,21 @@ STATIC_URL = "static/"
 REDIS_HOST = os.environ.get("REDIS_HOST")
 REDIS_PORT = os.environ.get("REDIS_PORT")
 
+RABBITMQ_HOST = os.environ.get("RABBITMQ_HOST")
+RABBITMQ_PORT = os.environ.get("RABBITMQ_PORT")
+RABBITMQ_USER = os.environ.get("RABBITMQ_DEFAULT_USER")
+RABBITMQ_PASSWORD = os.environ.get("RABBITMQ_DEFAULT_PASS")
+
+# celery Tasks
+CELERY_TASK_TRACK_STARTED = True
+CELERY_BROKER_URL = (
+    f"amqp://{RABBITMQ_USER}:{RABBITMQ_PASSWORD}@{RABBITMQ_HOST}:{RABBITMQ_PORT}/"
+)
+CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}/3"
+CELERY_TIME_ZONE = "Asia/Tehran"
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+CELERY_TASK_DEFAULT_QUEUE = "event-backend"
+
 DEFAULT_CACHE_DATABASE = os.environ.get("DEFAULT_CACHE_DATABASE")
 DEFAULT_CACHE_TTL = os.environ.get("DEFAULT_CACHE_TTL")
 
