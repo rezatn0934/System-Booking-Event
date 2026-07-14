@@ -35,3 +35,10 @@ class EventSelector:
             return cls.base_queryset().get(pk=event_id)
         except Event.DoesNotExist:
             raise NotFound("Event not found.")
+
+    @classmethod
+    def list(cls):
+
+        return cls.base_queryset().order_by(
+            "event_date"
+        )
