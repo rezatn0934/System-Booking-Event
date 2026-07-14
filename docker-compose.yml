@@ -1,0 +1,134 @@
+services:
+  db:
+    container_name: db
+    image: postgres:15-alpine
+    env_file:
+      - ./env/postgres.env
+    ports:
+      - "5433:5433"
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app
+    volumes:
+      - .:/code/
+      - log_data:/code/logs
+    ports:
+      - "8000:8000"
+    networks:
+      - backend
+    restart: always
+    depends_on:
+      - db
+
+  redis:
+    container_name: redis
+    image: redis:7.0-alpine
+    networks:
+      - backend
+    ports:
+      - "6380:6379"
+    restart: always
+    volumes:
+      - redis_data:/data
+
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:3-alpine
+    networks:
+      - backend
+    env_file:
+      - ./env/rabbitmq.env
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_log:/var/log/rabbitmq
+    restart: always
+    ports:
+      - "5673:5673"
+      - "15673:15673"
+
+  celery:
+    container_name: celery
+    command: celery -A config worker -l INFO
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/code/
+      - log_data:/code/logs
+    environment:
+      - C_FORCE_ROOT=true
+    networks:
+      - backend
+    restart: always
+    depends_on:
+      - app
+      - rabbitmq
+      - redis
+
+  celery_beat:
+    container_name: celery_beat
+    command: celery -A config beat --loglevel=info
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/code/
+    depends_on:
+      - app
+      - celery
+    networks:
+      - backend
+    restart: always
+
+  flower:
+    container_name: flower
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A config flower --port=5004
+    networks:
+      - backend
+    ports:
+      - "5004:5004"
+    depends_on:
+      - app
+      - celery
+    volumes:
+      - flower_data:/flower_data
+
+  nginx:
+    container_name: nginx
+    build:
+      context: .
+      dockerfile: Dockerfile-Nginx
+    ports:
+      - "81:80"
+    depends_on:
+      - app
+    networks:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  rabbitmq_log:
+  flower_data:
+  log_data:
+
+networks:
+  backend:
