@@ -17,10 +17,20 @@ from accounts.serializers import (
 )
 from accounts.services.auth import JWTService
 from accounts.services.otp_service import OTPService
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 
 User = get_user_model()
 
 
+@extend_schema(
+    tags=["Authentication"],
+    summary="Login with username and password",
+    request=PasswordLoginSerializer,
+    responses={
+        200: OpenApiResponse(description="Login successful"),
+        400: OpenApiResponse(description="Validation error"),
+    },
+)
 class PasswordLoginView(APIView):
     authentication_classes = []
     permission_classes = []
@@ -34,6 +44,15 @@ class PasswordLoginView(APIView):
         return Response(tokens, status=status.HTTP_200_OK)
 
 
+@extend_schema(
+    tags=["Authentication"],
+    summary="Verify OTP",
+    request=VerifyOTPSerializer,
+    responses={
+        200: OpenApiResponse(description="OTP verified successfully"),
+        400: OpenApiResponse(description="Invalid OTP"),
+    },
+)
 class VerifyOTPView(APIView):
     authentication_classes = []
     permission_classes = []
@@ -63,6 +82,15 @@ class VerifyOTPView(APIView):
         return Response(tokens, status=status.HTTP_200_OK)
 
 
+@extend_schema(
+    tags=["Authentication"],
+    summary="Send OTP",
+    request=SendOTPSerializer,
+    responses={
+        200: OpenApiResponse(description="OTP sent successfully"),
+        400: OpenApiResponse(description="Validation error"),
+    },
+)
 class SendOTPView(APIView):
     authentication_classes = []
     permission_classes = []
@@ -86,10 +114,21 @@ class SendOTPView(APIView):
 class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=["Profile"],
+        summary="Get current user profile",
+        responses=UserSerializer,
+    )
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
 
+    @extend_schema(
+        tags=["Profile"],
+        summary="Update current user profile",
+        request=UpdateProfileSerializer,
+        responses=UserSerializer,
+    )
     def patch(self, request):
         serializer = UpdateProfileSerializer(
             request.user,
@@ -106,6 +145,14 @@ class ProfileView(APIView):
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=["Authentication"],
+        summary="Logout",
+        request=LogoutSerializer,
+        responses={
+            204: OpenApiResponse(description="Logged out successfully"),
+        },
+    )
     def post(self, request):
         serializer = LogoutSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -118,6 +165,14 @@ class LogoutView(APIView):
 class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=["Authentication"],
+        summary="Change password",
+        request=ChangePasswordSerializer,
+        responses={
+            204: OpenApiResponse(description="Password changed successfully"),
+        },
+    )
     def post(self, request):
         serializer = ChangePasswordSerializer(
             data=request.data,
@@ -135,6 +190,14 @@ class ChangePasswordView(APIView):
 class SetPasswordView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=["Authentication"],
+        summary="Set password",
+        request=SetPasswordSerializer,
+        responses={
+            204: OpenApiResponse(description="Password set successfully"),
+        },
+    )
     def post(self, request):
         serializer = SetPasswordSerializer(
             data=request.data,

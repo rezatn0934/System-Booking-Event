@@ -11,8 +11,59 @@ from bookings.serializers import (
     EventDetailSerializer,
 )
 from bookings.services.event_service import EventService
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=["Events"],
+        summary="List events",
+        description="Public endpoint.",
+        responses=EventDetailSerializer(many=True),
+    ),
+    retrieve=extend_schema(
+        tags=["Events"],
+        summary="Retrieve event",
+        description="Public endpoint.",
+        responses=EventDetailSerializer,
+    ),
+    create=extend_schema(
+        tags=["Events"],
+        summary="Create event",
+        description="Admin only.",
+        request=EventCreateSerializer,
+        responses={
+            201: EventDetailSerializer,
+            400: OpenApiResponse(description="Validation error"),
+        },
+    ),
+    update=extend_schema(
+        tags=["Events"],
+        summary="Update event",
+        description="Admin only.",
+        request=EventCreateSerializer,
+        responses=EventDetailSerializer,
+    ),
+    partial_update=extend_schema(
+        tags=["Events"],
+        summary="Partially update event",
+        description="Admin only.",
+        request=EventCreateSerializer,
+        responses=EventDetailSerializer,
+    ),
+    destroy=extend_schema(
+        tags=["Events"],
+        summary="Delete event",
+        description="Admin only.",
+        responses={
+            204: OpenApiResponse(description="Event deleted successfully"),
+        },
+    ),
+)
 class EventModelViewSet(ModelViewSet):
     queryset = Event.objects.all()
     filter_backends = (
@@ -45,6 +96,11 @@ class EventModelViewSet(ModelViewSet):
         if self.action in ("list", "retrieve"):
             return [AllowAny()]
         return [IsAdminUser()]
+
+    def get_queryset(self):
+        if self.action == "list":
+            return EventSelector.list()
+        return self.queryset
 
     def get_object(self):
         if self.action == "retrieve":
