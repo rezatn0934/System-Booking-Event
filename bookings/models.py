@@ -36,7 +36,7 @@ class Event(models.Model):
 
 
 class Booking(models.Model):
-    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="bookings")
+    event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name="bookings")
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="bookings"
