@@ -11,12 +11,12 @@ class EventService:
     @classmethod
     @transaction.atomic
     def create(
-            cls,
-            *,
-            title: str,
-            description: str,
-            capacity: int,
-            event_date,
+        cls,
+        *,
+        title: str,
+        description: str,
+        capacity: int,
+        event_date,
     ) -> Event:
         if event_date <= timezone.now():
             raise ValidationError({"event_date": "Event date must be in the future."})
@@ -31,10 +31,10 @@ class EventService:
     @classmethod
     @transaction.atomic
     def update(
-            cls,
-            *,
-            event_id: int,
-            **validated_data,
+        cls,
+        *,
+        event_id: int,
+        **validated_data,
     ) -> Event:
         try:
             event = Event.objects.select_for_update().get(
@@ -45,9 +45,7 @@ class EventService:
 
         event_date = validated_data.get("event_date")
         if event_date and event_date <= timezone.now():
-            raise BusinessLogicException(
-                "Event date must be in the future."
-            )
+            raise BusinessLogicException("Event date must be in the future.")
         for field, value in validated_data.items():
             setattr(event, field, value)
 
@@ -59,11 +57,7 @@ class EventService:
     @transaction.atomic
     def delete(*, event_id: int) -> None:
         try:
-            event = (
-                Event.objects
-                .select_for_update()
-                .get(pk=event_id)
-            )
+            event = Event.objects.select_for_update().get(pk=event_id)
         except Event.DoesNotExist:
             raise NotFound("Event not found.")
 
@@ -73,8 +67,6 @@ class EventService:
             )
 
         if event.event_date <= timezone.now():
-            raise BusinessLogicException(
-                "Past events cannot be deleted."
-            )
+            raise BusinessLogicException("Past events cannot be deleted.")
 
         event.delete()
