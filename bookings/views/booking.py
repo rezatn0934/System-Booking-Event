@@ -89,7 +89,7 @@ class BookingModelViewSet(
     @extend_schema(
         tags=["Bookings"],
         summary="Confirm booking",
-        request='',
+        request="",
         responses={
             200: BookingSerializer,
             400: OpenApiResponse(description="Booking cannot be confirmed"),
@@ -107,7 +107,7 @@ class BookingModelViewSet(
     @extend_schema(
         tags=["Bookings"],
         summary="Cancel booking",
-        request='',
+        request="",
         responses={
             200: BookingSerializer,
             400: OpenApiResponse(description="Booking cannot be cancelled"),

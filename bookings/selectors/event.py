@@ -38,7 +38,4 @@ class EventSelector:
 
     @classmethod
     def list(cls):
-
-        return cls.base_queryset().order_by(
-            "event_date"
-        )
+        return cls.base_queryset().order_by("event_date")

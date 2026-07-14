@@ -1,8 +1,14 @@
 from django.conf import settings
 from django.core.cache import caches
 
-from accounts.exceptions import OTPExpiredException, OTPBlockedException, OTPAlreadySentException, \
-    OTPRequestLimitExceededException, OTPInvalidatedException, OTPInvalidException
+from accounts.exceptions import (
+    OTPExpiredException,
+    OTPBlockedException,
+    OTPAlreadySentException,
+    OTPRequestLimitExceededException,
+    OTPInvalidatedException,
+    OTPInvalidException,
+)
 from accounts.tasks import send_otp_task
 from accounts.utils import generate_otp
 

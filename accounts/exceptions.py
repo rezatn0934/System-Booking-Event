@@ -15,7 +15,9 @@ class OTPBlockedException(OTPException):
 
 class OTPAlreadySentException(OTPException):
     default_code = "otp_already_sent"
-    default_detail = "OTP has already been sent. Please wait before requesting another code."
+    default_detail = (
+        "OTP has already been sent. Please wait before requesting another code."
+    )
 
 
 class OTPRequestLimitExceededException(OTPException):
