@@ -1,9 +1,6 @@
-from datetime import timedelta
-
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
-from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 
@@ -49,10 +46,7 @@ class Booking(models.Model):
         db_index=True,
     )
 
-    expires_at = models.DateTimeField(
-        default=lambda: timezone.now() + timedelta(minutes=10),
-        db_index=True,
-    )
+    expires_at = models.DateTimeField(db_index=True)
 
     confirmed_at = models.DateTimeField(null=True, blank=True)
 
