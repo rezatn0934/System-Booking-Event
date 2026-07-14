@@ -1,12 +1,22 @@
 from rest_framework import serializers
 
 from accounts.serializers import UserSerializer
-from bookings.models import Booking
-from bookings.serializers import EventCreateSerializer
+from bookings.models import Booking, Event
 
 
 class BookingCreateSerializer(serializers.Serializer):
     event_id = serializers.IntegerField(min_value=1)
+
+
+class EventCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Event
+        fields = (
+            "title",
+            "description",
+            "capacity",
+            "event_date",
+        )
 
 
 class BookingSerializer(serializers.ModelSerializer):

@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
@@ -5,7 +7,6 @@ from rest_framework.exceptions import NotFound
 
 from bookings.models import Booking, BookingStatus, Event
 from bookings.states.booking_context import BookingContext
-from bookings.tasks import expire_booking
 from bookings.exceptions import (
     BusinessLogicException,
     ResourceExpiredException,
@@ -52,7 +53,10 @@ class BookingService:
             booking = Booking.objects.create(
                 event=event,
                 user=user,
+                expires_at=timezone.now() + timedelta(minutes=10),
             )
+            from bookings.tasks import expire_booking
+
             transaction.on_commit(
                 lambda: expire_booking.apply_async(
                     kwargs={"booking_id": booking.pk},
