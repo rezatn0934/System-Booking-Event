@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.core.cache import caches
 
+from accounts.exceptions import OTPExpiredException, OTPBlockedException, OTPAlreadySentException, \
+    OTPRequestLimitExceededException, OTPInvalidatedException, OTPInvalidException
 from accounts.tasks import send_otp_task
 from accounts.utils import generate_otp
 
@@ -27,10 +29,10 @@ class OTPService:
     @classmethod
     def send_otp(cls, phone: str) -> None:
         if cache.get(cls._block_key(phone)):
-            raise ValueError("OTP temporarily blocked.")
+            raise OTPBlockedException()
 
         if cache.get(cls._otp_key(phone)):
-            raise ValueError("OTP already sent. Please wait.")
+            raise OTPAlreadySentException()
 
         request_key = cls._request_key(phone)
 
@@ -61,7 +63,7 @@ class OTPService:
                 ]
             )
 
-            raise ValueError("OTP request limit exceeded.")
+            raise OTPRequestLimitExceededException()
 
         otp = generate_otp()
 
@@ -80,7 +82,7 @@ class OTPService:
         real = cache.get(cls._otp_key(phone))
 
         if real is None:
-            raise ValueError("OTP expired or invalid.")
+            raise OTPExpiredException()
 
         if otp != real:
             attempts = cache.get(cls._attempt_key(phone), 0) + 1
@@ -99,9 +101,9 @@ class OTPService:
                     ]
                 )
 
-                raise ValueError("OTP invalidated.")
+                raise OTPInvalidatedException()
 
-            raise ValueError("Invalid OTP.")
+            raise OTPInvalidException()
 
         cache.delete_many(
             [
