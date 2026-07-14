@@ -3,10 +3,14 @@ from rest_framework import serializers
 
 from accounts.authenticators import PhoneBackend
 from accounts.models import User
+from accounts.validators import phone_number_validator
 
 
 class PasswordLoginSerializer(serializers.Serializer):
-    username = serializers.CharField(max_length=11)
+    username = serializers.CharField(
+        max_length=11,
+        validators=[phone_number_validator],
+    )
     password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
@@ -27,11 +31,17 @@ class PasswordLoginSerializer(serializers.Serializer):
 
 
 class SendOTPSerializer(serializers.Serializer):
-    username = serializers.CharField(max_length=11)
+    username = serializers.CharField(
+        max_length=11,
+        validators=[phone_number_validator],
+    )
 
 
 class VerifyOTPSerializer(serializers.Serializer):
-    username = serializers.CharField(max_length=11)
+    username = serializers.CharField(
+        max_length=11,
+        validators=[phone_number_validator],
+    )
     otp = serializers.CharField(max_length=6)
 
 
