@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -15,39 +14,97 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Event',
+            name="Event",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('title', models.CharField(max_length=255)),
-                ('description', models.TextField(blank=True)),
-                ('capacity', models.PositiveIntegerField()),
-                ('event_date', models.DateTimeField()),
-                ('is_active', models.BooleanField(default=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("title", models.CharField(max_length=255)),
+                ("description", models.TextField(blank=True)),
+                ("capacity", models.PositiveIntegerField()),
+                ("event_date", models.DateTimeField()),
+                ("is_active", models.BooleanField(default=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'ordering': ('event_date',),
+                "ordering": ("event_date",),
             },
         ),
         migrations.CreateModel(
-            name='Booking',
+            name="Booking",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('status', models.CharField(choices=[('PE', 'Pending'), ('CO', 'Confirmed'), ('CA', 'Canceled'), ('EX', 'Expired')], db_index=True, default='PE', max_length=2)),
-                ('expires_at', models.DateTimeField(db_index=True)),
-                ('confirmed_at', models.DateTimeField(blank=True, null=True)),
-                ('canceled_at', models.DateTimeField(blank=True, null=True)),
-                ('expired_at', models.DateTimeField(blank=True, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='bookings', to=settings.AUTH_USER_MODEL)),
-                ('event', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='bookings', to='bookings.event')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("PE", "Pending"),
+                            ("CO", "Confirmed"),
+                            ("CA", "Canceled"),
+                            ("EX", "Expired"),
+                        ],
+                        db_index=True,
+                        default="PE",
+                        max_length=2,
+                    ),
+                ),
+                ("expires_at", models.DateTimeField(db_index=True)),
+                ("confirmed_at", models.DateTimeField(blank=True, null=True)),
+                ("canceled_at", models.DateTimeField(blank=True, null=True)),
+                ("expired_at", models.DateTimeField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="bookings",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "event",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="bookings",
+                        to="bookings.event",
+                    ),
+                ),
             ],
             options={
-                'ordering': ('-created_at',),
-                'indexes': [models.Index(fields=['event', 'status'], name='bookings_bo_event_i_f8e449_idx'), models.Index(fields=['status', 'expires_at'], name='bookings_bo_status_86acff_idx')],
-                'constraints': [models.UniqueConstraint(condition=models.Q(('status__in', ['PE', 'CO'])), fields=('event', 'user'), name='unique_active_booking_per_user')],
+                "ordering": ("-created_at",),
+                "indexes": [
+                    models.Index(
+                        fields=["event", "status"],
+                        name="bookings_bo_event_i_f8e449_idx",
+                    ),
+                    models.Index(
+                        fields=["status", "expires_at"],
+                        name="bookings_bo_status_86acff_idx",
+                    ),
+                ],
+                "constraints": [
+                    models.UniqueConstraint(
+                        condition=models.Q(("status__in", ["PE", "CO"])),
+                        fields=("event", "user"),
+                        name="unique_active_booking_per_user",
+                    )
+                ],
             },
         ),
     ]

@@ -11,8 +11,34 @@ from bookings.serializers import (
     BookingSerializer,
 )
 from bookings.services.booking_service import BookingService
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=["Bookings"],
+        summary="List bookings",
+        responses=BookingSerializer(many=True),
+    ),
+    retrieve=extend_schema(
+        tags=["Bookings"],
+        summary="Retrieve booking",
+        responses=BookingSerializer,
+    ),
+    create=extend_schema(
+        tags=["Bookings"],
+        summary="Create booking",
+        request=BookingCreateSerializer,
+        responses={
+            201: BookingSerializer,
+            400: OpenApiResponse(description="Validation error"),
+        },
+    ),
+)
 class BookingModelViewSet(
     mixins.CreateModelMixin,
     mixins.RetrieveModelMixin,
@@ -60,6 +86,15 @@ class BookingModelViewSet(
             return BookingCreateSerializer
         return BookingSerializer
 
+    @extend_schema(
+        tags=["Bookings"],
+        summary="Confirm booking",
+        request="",
+        responses={
+            200: BookingSerializer,
+            400: OpenApiResponse(description="Booking cannot be confirmed"),
+        },
+    )
     @action(detail=True, methods=["post"])
     def confirm(self, request, pk=None):
         booking = BookingService.confirm(
@@ -69,6 +104,15 @@ class BookingModelViewSet(
 
         return Response(self.get_serializer(booking).data)
 
+    @extend_schema(
+        tags=["Bookings"],
+        summary="Cancel booking",
+        request="",
+        responses={
+            200: BookingSerializer,
+            400: OpenApiResponse(description="Booking cannot be cancelled"),
+        },
+    )
     @action(detail=True, methods=["post"])
     def cancel(self, request, pk=None):
         booking = BookingService.cancel(
