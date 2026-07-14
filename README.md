@@ -1,105 +1,269 @@
 # Event Booking System
 
-A backend service built with **Django** and **Django REST Framework**
-for managing events and ticket reservations.
+A production-oriented backend service built with **Django** and **Django REST Framework** for managing events and reservations.
 
-The system guarantees that event capacity is never exceeded, even under
-concurrent booking requests, while providing a reliable reservation
-expiration mechanism.
+The project focuses on correctness, consistency, and reliability under concurrent booking requests. It guarantees that event capacity is never exceeded while providing an asynchronous and fault-tolerant reservation expiration mechanism.
 
-------------------------------------------------------------------------
+---
 
-# Tech Stack
+# Table of Contents
 
--   Python 3.13
--   Django
--   Django REST Framework
--   PostgreSQL
--   Redis
--   RabbitMQ
--   Celery
--   JWT Authentication
--   Docker & Docker Compose
+- Features
+- Tech Stack
+- Architecture
+- Project Structure
+- Running the Project
+- API Overview
+- Authentication
+- Booking Workflow
+- Concurrency Strategy
+- Reservation Expiration
+- State Pattern
+- Security
+- Reliability
+- Design Decisions
+- Trade-offs
+- Future Improvements
 
-------------------------------------------------------------------------
+---
 
 # Features
 
 ## Authentication
 
--   OTP login using Redis (OTP codes are never stored in the database)
--   Optional password authentication
--   JWT access & refresh tokens
--   Logout with token invalidation
--   User profile endpoint
+- OTP authentication using Redis
+- IP-based OTP abuse protection
+- Optional password authentication
+- JWT Access & Refresh Tokens
+- Logout with token invalidation
+- User profile endpoint
 
-## Events
+---
 
--   Create, update and delete events (Admin only)
--   Public event list and detail
--   Search, filtering, ordering and pagination
--   Event statistics:
-    -   Total capacity
-    -   Active bookings (Pending + Confirmed)
-    -   Confirmed bookings
-    -   Remaining capacity
+## Event Management
 
-## Bookings
+- Public event list
+- Public event detail
+- Admin-only event creation
+- Admin-only event update
+- Admin-only event deletion
+- Pagination
+- Search
+- Filtering
+- Ordering
 
--   Create booking
--   Confirm booking (payment simulation)
--   Cancel booking
--   List and retrieve bookings
+Event statistics include:
 
-Business rules:
+- Total Capacity
+- Active Reservations
+- Confirmed Reservations
+- Remaining Capacity
 
--   One active booking per user per event
--   Capacity is never exceeded
--   New bookings are created as **PENDING**
--   Pending bookings expire after 10 minutes
--   Expired bookings automatically release capacity
+Event deletion protection:
 
-------------------------------------------------------------------------
+- Started events cannot be deleted.
+- Events with active reservations cannot be deleted.
+
+---
+
+## Booking Management
+
+- Create reservation
+- Confirm reservation
+- Cancel reservation
+- List reservations
+- Retrieve reservation
+
+Business Rules
+
+- Every reservation starts as **PENDING**
+- Reservation expires after **10 minutes**
+- Expired reservations automatically release capacity
+- One active reservation per user per event
+- Capacity is never exceeded
+- Reservation creation is idempotent
+- Confirmation is allowed only before the event starts
+- Cancellation is allowed only before the event starts
+
+---
+
+# Tech Stack
+
+| Component | Technology |
+|------------|------------|
+| Language | Python 3.13 |
+| Framework | Django |
+| API | Django REST Framework |
+| Database | PostgreSQL |
+| Cache | Redis |
+| Message Broker | RabbitMQ |
+| Background Jobs | Celery |
+| Web Server | Gunicorn |
+| Reverse Proxy | Nginx |
+| Authentication | JWT |
+| Containerization | Docker |
+
+---
+
+# Architecture
+
+The project follows a layered architecture to separate concerns and keep business logic independent from the HTTP layer.
+
+```text
+                HTTP Request
+                     │
+                     ▼
+              Django REST Framework
+                     │
+        ┌────────────┴────────────┐
+        ▼                         ▼
+    Permissions              Serializers
+                                   │
+                                   ▼
+                              Services
+                           ┌─────┴─────┐
+                           ▼           ▼
+                      Selectors    Celery Tasks
+                           │           │
+                           └─────┬─────┘
+                                 ▼
+                           PostgreSQL
+
+Redis (OTP Storage)
+RabbitMQ (Broker)
+```
+
+Layer responsibilities
+
+### Views
+
+- HTTP endpoints
+- Authentication
+- Permissions
+- Calling services
+
+### Serializers
+
+- Validation
+- Serialization
+- Request parsing
+
+### Services
+
+- Business logic
+- Transaction management
+- Coordination between models
+
+### Selectors
+
+- Read-only optimized queries
+- Query composition
+- Statistics
+
+### Models
+
+- Database schema
+- Constraints
+- Relationships
+
+---
 
 # Project Structure
 
-``` text
-accounts/
-    authentication/
-    serializers/
-    services/
-    views/
-
-bookings/
-    models/
-    selectors/
-    serializers/
-    services/
-    states/
-    tasks/
-    views/
-
-config/
-tests/
+```text
+.
+├── accounts
+│   ├── management/
+│   │   └── commands/
+│   ├── services/
+│   ├── admin.py
+│   ├── authenticators.py
+│   ├── exceptions.py
+│   ├── managers.py
+│   ├── models.py
+│   ├── serializers.py
+│   ├── tasks.py
+│   ├── urls.py
+│   ├── utils.py
+│   ├── validators.py
+│   └── views.py
+│
+├── bookings
+│   ├── migrations/
+│   ├── selectors/
+│   ├── serializers/
+│   ├── services/
+│   ├── states/
+│   ├── views/
+│   ├── admin.py
+│   ├── exceptions.py
+│   ├── models.py
+│   ├── tasks.py
+│   ├── urls.py
+│   └── tests.py
+│
+├── config
+│   ├── base_task.py
+│   ├── celery.py
+│   ├── settings.py
+│   ├── urls.py
+│   ├── asgi.py
+│   └── wsgi.py
+│
+├── env
+│   ├── postgres.env
+│   ├── postgres.env.example
+│   ├── rabbitmq.env
+│   └── rabbitmq.env.example
+│
+├── static/
+├── docker-compose.yml
+├── Dockerfile
+├── Dockerfile-Nginx
+├── nginx.conf
+├── init.sh
+├── wait-for-it.sh
+├── manage.py
+├── pyproject.toml
+├── uv.lock
+├── LICENSE
+└── README.md
 ```
+## Directory Overview
 
-------------------------------------------------------------------------
+| Directory | Responsibility |
+|-----------|----------------|
+| `accounts/` | Authentication, OTP workflow, JWT, user management |
+| `bookings/` | Event and reservation domain, business rules, state management |
+| `config/` | Django settings, Celery configuration, base task definitions |
+| `env/` | Environment configuration templates |
+| `static/` | Static files |
+| `init.sh` | Container initialization (migrations, collectstatic, startup) |
+| `wait-for-it.sh` | Waits for dependent services before application startup |
+| `Dockerfile` | Django application image |
+| `Dockerfile-Nginx` | Nginx image |
+| `docker-compose.yml` | Local development orchestration |
+| `nginx.conf` | Reverse proxy configuration |
+---
 
 # Running the Project
 
 ## Clone
 
-``` bash
+```bash
 git clone <repository-url>
+
 cd event-booking
 ```
 
-## Environment Variables
+## Configure Environment
 
 Create a `.env` file.
 
-``` env
-SECRET_KEY=your-secret-key
+Example:
+
+```env
+SECRET_KEY=change-me
 
 DEBUG=True
 
@@ -118,215 +282,530 @@ RABBITMQ_USER=guest
 RABBITMQ_PASSWORD=guest
 ```
 
-## Docker
+## Start
 
-``` bash
+```bash
 docker compose up --build
 ```
 
-## Migrations
+## Apply Migrations
 
-``` bash
-python manage.py migrate
+```bash
+docker compose exec app python manage.py migrate
 ```
 
-## Create Superuser
+## API Documentation
 
-``` bash
-python manage.py createsuperuser
+The API is available after starting the application.
+# API Overview
+
+## Authentication
+
+| Method | Endpoint | Description |
+|----------|----------------|----------------|
+| POST | `/api/v1/auth/send-otp/` | Send OTP |
+| POST | `/api/v1/auth/verify-otp/` | Verify OTP |
+| POST | `/api/v1/auth/login/` | Login with password |
+| POST | `/api/v1/auth/refresh/` | Refresh JWT |
+| POST | `/api/v1/auth/logout/` | Logout |
+| GET | `/api/v1/auth/profile/` | Current user |
+
+---
+
+## Events
+
+| Method | Endpoint | Permission |
+|----------|----------------|----------------|
+| GET | `/api/v1/events/` | Public |
+| GET | `/api/v1/events/{id}/` | Public |
+| POST | `/api/v1/events/` | Admin |
+| PATCH | `/api/v1/events/{id}/` | Admin |
+| DELETE | `/api/v1/events/{id}/` | Admin |
+
+Supported query parameters:
+
+```
+search=
+ordering=
+page=
+event_date=
 ```
 
-## Run Django
+---
 
-``` bash
-python manage.py runserver
+## Bookings
+
+| Method | Endpoint |
+|----------|----------------|
+| GET | `/api/v1/bookings/` |
+| GET | `/api/v1/bookings/{id}/` |
+| POST | `/api/v1/bookings/` |
+| POST | `/api/v1/bookings/{id}/confirm/` |
+| POST | `/api/v1/bookings/{id}/cancel/` |
+
+Filtering
+
+```
+status=
+event=
+user=
 ```
 
-## Run Celery Worker
+Ordering
 
-``` bash
-celery -A config worker -l info
+```
+created_at
+confirmed_at
+expires_at
+status
+event__event_date
 ```
 
-## Run Celery Beat
+Search
 
-``` bash
-celery -A config beat -l info
+```
+event__title
 ```
 
-------------------------------------------------------------------------
+---
 
-# Architecture
+# Booking Workflow
 
-The project follows a layered architecture:
-
-``` text
-Request
-   │
-   ▼
-Views
-   │
-   ▼
-Serializers
-   │
-   ▼
-Services
-   │
-   ▼
-Selectors
-   │
-   ▼
-Models / Database
+```text
+Create Reservation
+        │
+        ▼
+     PENDING
+        │
+        ├──────────────┐
+        ▼              ▼
+ Confirmed        10 Minutes Passed
+                        │
+                        ▼
+                    EXPIRED
 ```
 
-Responsibilities:
+Users may also cancel reservations before the event starts.
 
--   **Views**: HTTP layer only.
--   **Serializers**: Validation and serialization.
--   **Services**: Business logic and transaction management.
--   **Selectors**: Optimized read queries.
--   **Models**: Database schema and constraints.
-
-------------------------------------------------------------------------
+---
 
 # Concurrency Strategy
 
-Overselling prevention is the highest priority.
+Overselling prevention is the primary design goal.
 
-The implementation combines multiple protection layers:
+Multiple protection layers are implemented.
 
-## Pessimistic Locking
+## 1. Atomic Transactions
 
-The event row is locked using:
+Every critical operation executes inside:
 
-``` python
-Event.objects.select_for_update()
-```
-
-Only one transaction can reserve seats for the same event at a time.
-
-## Database Constraints
-
-A partial unique constraint prevents duplicate active bookings.
-
-``` text
-(event, user)
-WHERE status IN (PENDING, CONFIRMED)
-```
-
-## Atomic Transactions
-
-Critical operations execute inside:
-
-``` python
+```python
 transaction.atomic()
 ```
 
-## Idempotency
+This guarantees consistency throughout the booking lifecycle.
 
-Repeated booking requests return the existing active booking instead of
-creating duplicates.
+---
 
-------------------------------------------------------------------------
+## 2. Row-Level Locking
 
-# Reservation Expiration
+The corresponding event row is locked during booking creation.
 
-Each booking is created with:
+```python
+Event.objects.select_for_update()
+```
 
--   Status = `PENDING`
--   `expires_at = now + 10 minutes`
+Only one transaction can modify the available capacity for a specific event at a time.
 
-After the transaction is committed:
+---
 
-``` python
+## 3. Database Constraints
+
+A partial unique constraint prevents duplicate active reservations.
+
+```
+(event, user)
+
+WHERE status IN (PENDING, CONFIRMED)
+```
+
+Even if two identical requests arrive simultaneously, the database guarantees correctness.
+
+---
+
+## 4. Idempotency
+
+Repeated reservation requests never create duplicate reservations.
+
+If an active reservation already exists, it is returned instead of creating another one.
+
+---
+
+## 5. Reliable Task Scheduling
+
+Reservation expiration tasks are scheduled only after the database transaction has been committed.
+
+```python
 transaction.on_commit(...)
 ```
 
-A Celery task is scheduled using ETA.
+This prevents orphan background tasks from being published for rolled-back transactions.
 
-When the task executes it:
+---
 
-1.  Locks the booking row.
-2.  Validates the current state.
-3.  Expires the booking if it is still pending.
+# Reservation Expiration
 
-The process is retry-safe and idempotent.
+Every reservation contains:
 
-------------------------------------------------------------------------
+```
+status = PENDING
+
+expires_at = now + 10 minutes
+```
+
+After commit:
+
+```
+expire_booking.apply_async(
+    eta=booking.expires_at
+)
+```
+
+The worker executes the expiration task exactly when the reservation expires.
+
+When executed it:
+
+1. Locks the reservation.
+2. Checks its current state.
+3. Expires it if still pending.
+4. Releases event capacity.
+
+---
+
+## Recovery Mechanism
+
+A periodic Celery Beat task periodically scans overdue reservations.
+
+This acts as a recovery layer if:
+
+- Worker was unavailable
+- Broker temporarily failed
+- ETA task was missed
+
+The periodic task simply re-dispatches expiration tasks.
+
+Since expiration is idempotent, executing it multiple times is safe.
+
+---
 
 # State Pattern
 
-Booking lifecycle:
+Reservation lifecycle is implemented using the State Pattern.
 
-``` text
-PENDING
- ├──► CONFIRMED
- ├──► CANCELED
- └──► EXPIRED
+```text
+               +-------------+
+               |   PENDING   |
+               +-------------+
+                /     |     \
+               /      |      \
+              ▼       ▼       ▼
+
+      CONFIRMED   CANCELED   EXPIRED
 ```
 
-Each state encapsulates its own transition rules, improving
-maintainability and extensibility.
+Each state owns its own transition rules.
 
-------------------------------------------------------------------------
+Benefits
+
+- Better maintainability
+- Open for extension
+- Eliminates complex conditional statements
+- Easier testing
+
+---
+
+# Celery
+
+Celery is responsible for asynchronous reservation expiration.
+
+Components
+
+- RabbitMQ
+- Celery Worker
+- Celery Beat
+
+Worker
+
+- Executes ETA tasks
+- Retries automatically
+- Acknowledges messages only after successful execution
+
+Beat
+
+- Periodically scans overdue reservations
+- Provides recovery against missed ETA tasks
+
+# Security
+
+The project applies multiple security layers.
+
+## Authentication
+
+- JWT Access Token
+- JWT Refresh Token
+- Logout with token invalidation
+
+---
+
+## OTP
+
+OTP codes are **never stored inside PostgreSQL**.
+
+Instead:
+
+- Stored inside Redis
+- Short TTL
+- Automatically removed after expiration
+
+Benefits
+
+- Faster access
+- No unnecessary database writes
+- Automatic cleanup
+
+---
+
+## OTP Abuse Protection
+
+To reduce OTP abuse:
+
+- Temporary IP blocking
+- Redis counters
+- Configurable cooldown period
+
+---
+
+## Authorization
+
+Event management endpoints are restricted to administrators.
+
+Public users can:
+
+- Browse events
+- View event details
+
+Authenticated users can:
+
+- Create reservations
+- Confirm reservations
+- Cancel reservations
+- View only their own reservations
+
+Administrators can:
+
+- Manage all events
+- View every reservation
+
+---
+
+## DRF Throttling
+
+Rate limiting is enabled to reduce abusive requests.
+
+Anonymous users:
+
+```
+100/hour
+```
+
+Authenticated users:
+
+```
+1000/hour
+```
+
+---
+
+## Reverse Proxy
+
+Nginx is used as the reverse proxy.
+
+Responsibilities
+
+- Reverse proxy
+- Static file serving
+- Request forwarding
+- Security headers
+- Compression
+
+---
+
+# Reliability
+
+Several mechanisms guarantee system consistency.
+
+## Atomic Transactions
+
+Critical operations execute inside
+
+```python
+transaction.atomic()
+```
+
+---
+
+## Row-Level Locking
+
+```python
+select_for_update()
+```
+
+Guarantees that concurrent reservation requests cannot oversell an event.
+
+---
+
+## Retry-safe Tasks
+
+Celery tasks are designed to be retry-safe.
+
+Executing the same expiration task multiple times never corrupts data.
+
+---
+
+## Automatic Recovery
+
+Even if:
+
+- a worker crashes,
+- RabbitMQ is temporarily unavailable,
+- ETA execution is delayed,
+
+the periodic recovery task eventually expires overdue reservations.
+
+---
+
+## Reliable Task Publishing
+
+Tasks are published only after successful database commits.
+
+```python
+transaction.on_commit(...)
+```
+
+This guarantees consistency between the database and the message broker.
+
+---
 
 # Design Decisions
 
-## Redis for OTP
-
-OTP codes are temporary and should not be persisted in PostgreSQL.
-
 ## Service Layer
 
-Business logic is reusable from REST APIs, Celery tasks and management
-commands.
+Business logic is intentionally isolated from Views.
+
+Advantages
+
+- Easier testing
+- Reusable logic
+- Cleaner HTTP layer
+
+---
 
 ## Selector Layer
 
-Selectors isolate read queries and keep services focused on business
-logic.
+Read operations are isolated from business logic.
+
+Benefits
+
+- Better query optimization
+- Easier maintenance
+- Clear separation of responsibilities
+
+---
+
+## Redis for OTP
+
+OTP codes are temporary data.
+
+Redis is a better fit than PostgreSQL because:
+
+- In-memory storage
+- Built-in expiration
+- Higher performance
+
+---
 
 ## Pessimistic Locking
 
-Correctness and consistency are prioritized over maximum throughput.
+The system prioritizes correctness over maximum throughput.
 
-------------------------------------------------------------------------
+Using
+
+```python
+SELECT FOR UPDATE
+```
+
+ensures that event capacity is always accurate.
+
+---
+
+## State Pattern
+
+Reservation lifecycle is implemented using the State Pattern.
+
+Instead of large conditional blocks, each state is responsible for its own transitions.
+
+Advantages
+
+- Extensible
+- Testable
+- Easy to maintain
+
+---
 
 # Trade-offs
 
-Chosen:
+The following architectural decisions were intentionally made.
 
--   Pessimistic locking
--   Service layer
--   State pattern
--   Redis for OTP
--   Celery for asynchronous expiration
+| Decision | Benefit | Cost |
+|-----------|---------|------|
+| Pessimistic Locking | Prevents overselling | Lower concurrency |
+| Service Layer | Clean architecture | More files |
+| Selector Layer | Optimized reads | Additional abstraction |
+| Redis OTP | Fast temporary storage | Requires Redis |
+| Celery | Reliable async jobs | Extra infrastructure |
+| RabbitMQ | Durable message broker | Operational complexity |
 
-Advantages:
+Overall, consistency and correctness were prioritized over maximum throughput.
 
--   Prevents overselling
--   High consistency
--   Reliable expiration
--   Maintainable architecture
-
-Disadvantages:
-
--   Reduced concurrency under extreme load due to row locking.
--   Extra infrastructure (Redis, RabbitMQ, Celery).
-
-------------------------------------------------------------------------
+---
 
 # Future Improvements
 
--   Payment gateway integration
--   Waiting list support
--   Notification service
--   Rate limiting
--   Event-driven architecture
--   Distributed locking
+Potential enhancements include:
 
-------------------------------------------------------------------------
+- Payment gateway integration
+- Waiting list support
+- Email notifications
+- SMS notifications
+- Prometheus metrics
+- Grafana dashboards
+- Distributed tracing
+- Outbox Pattern
+- Event-driven architecture
+- Horizontal worker autoscaling
+- Kubernetes deployment
+- CI/CD pipeline
+- Multi-region deployment
 
-# License
+---
 
-Implemented as part of a Senior Backend Engineering challenge.
+# Why This Architecture?
+
+The architecture was designed around four primary goals:
+
+1. **Correctness** — Event capacity must never be exceeded.
+2. **Reliability** — Reservation expiration must be fault tolerant.
+3. **Maintainability** — Business logic should remain isolated and easy to extend.
+4. **Scalability** — Components such as Redis, RabbitMQ, Celery Workers, and the API can be scaled independently.
+
+---
