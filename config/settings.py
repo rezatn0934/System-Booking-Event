@@ -14,6 +14,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from corsheaders.defaults import default_headers
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -31,7 +32,7 @@ ENV_TYPE = os.environ["ENV_TYPE"]
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 # Application definition
 
@@ -46,6 +47,9 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
+    "django_celery_beat",
+    "drf_spectacular",
+    "drf_spectacular_sidecar",
     ###############################
     "accounts.apps.AccountsConfig",
     "bookings.apps.BookingsConfig",
@@ -53,6 +57,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -79,6 +84,11 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "config.wsgi.application"
+CORS_ALLOW_HEADERS = default_headers + ("org",)
+CORS_ALLOW_ALL_ORIGINS = True
+CSRF_TRUSTED_ORIGINS = [
+    "https://*",
+]
 
 AUTH_USER_MODEL = "accounts.User"
 
@@ -87,10 +97,15 @@ AUTH_USER_MODEL = "accounts.User"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": os.environ["ENGINE"],
+        "NAME": os.environ["DBNAME"],
+        "USER": os.environ["DBUSER"],
+        "PASSWORD": os.environ["DBPASSWORD"],
+        "HOST": os.environ["DBHOST"],
+        "PORT": os.environ["DBPORT"],
     }
 }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -124,7 +139,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+STATIC_URL = "/static/"
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
 
 # cache config
 REDIS_HOST = os.environ.get("REDIS_HOST")
@@ -147,9 +166,6 @@ CELERY_TASK_DEFAULT_QUEUE = "event-backend"
 
 DEFAULT_CACHE_DATABASE = os.environ.get("DEFAULT_CACHE_DATABASE")
 DEFAULT_CACHE_TTL = os.environ.get("DEFAULT_CACHE_TTL")
-
-CAPTCHA_CACHE_TTL = os.environ.get("CAPTCHA_CACHE_TTL")
-CAPTCHA_CACHE_DATABASE = os.environ.get("CAPTCHA_CACHE_DATABASE")
 
 OTP_CACHE_TTL = os.environ.get("OTP_CACHE_TTL")
 OTP_CACHE_DATABASE = os.environ.get("OTP_CACHE_DATABASE")
@@ -178,7 +194,17 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 10,
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "100/hour",
+        "user": "1000/hour",
+    },
 }
+
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
@@ -190,6 +216,29 @@ SIMPLE_JWT = {
     "SIGNING_KEY": SECRET_KEY,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+SPECTACULAR_SETTINGS = {
+    "TITLE": "System Booking Event",
+    "DESCRIPTION": "System Booking Event API",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SERVE_PUBLIC": True,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "DEFAULT_GENERATOR_CLASS": "drf_spectacular.generators.SchemaGenerator",
+    "SECURITY": [
+        {
+            "BearerAuth": [],
+        }
+    ],
+    "APPEND_COMPONENTS": {
+        "securitySchemes": {
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+            }
+        }
+    },
+}
 
 OTP_TTL_SECONDS = 120
 
@@ -200,3 +249,7 @@ OTP_REQUEST_LIMIT = 5
 OTP_REQUEST_WINDOW_SECONDS = 3600
 
 OTP_BLOCK_SECONDS = 3600
+
+
+SUPERUSER = os.environ.get("SUPERUSER")
+SUPERPASS = os.environ.get("SUPERPASS")
