@@ -88,6 +88,7 @@ CORS_ALLOW_HEADERS = default_headers + ("org",)
 CORS_ALLOW_ALL_ORIGINS = True
 CSRF_TRUSTED_ORIGINS = [
     "https://*",
+    "http://*",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
