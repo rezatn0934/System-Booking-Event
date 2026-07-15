@@ -1,0 +1,15 @@
+.git
+.github
+.idea
+.vscode
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+*.pyc
+*.pyo
+*.pyd
+logs/
+dist/
+build/
